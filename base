@@ -1,0 +1,235 @@
+import React, { useState, useEffect } from 'react';
+import { Plus, Trash2, CheckCircle, Circle, Calendar, Clock, CalendarDays, RefreshCw } from 'lucide-react';
+
+const App = () => {
+  // State untuk menyimpan daftar item
+  const [items, setItems] = useState(() => {
+    const savedItems = localStorage.getItem('checklistItems');
+    return savedItems ? JSON.parse(savedItems) : [
+      { id: 1, text: 'Minum air putih 2L', type: 'harian', completed: false },
+      { id: 2, text: 'Olahraga 15 menit', type: 'harian', completed: false },
+      { id: 3, text: 'Review pengeluaran', type: 'mingguan', completed: false },
+      { id: 4, text: 'Bayar tagihan listrik', type: 'bulanan', completed: false },
+    ];
+  });
+
+  const [newItem, setNewItem] = useState('');
+  const [activeTab, setActiveTab] = useState('harian'); // harian, mingguan, bulanan
+
+  // Simpan ke localStorage setiap ada perubahan items
+  useEffect(() => {
+    localStorage.setItem('checklistItems', JSON.stringify(items));
+  }, [items]);
+
+  // Filter items berdasarkan tab yang aktif
+  const filteredItems = items.filter(item => item.type === activeTab);
+
+  // Hitung progress
+  const totalItems = filteredItems.length;
+  const completedItems = filteredItems.filter(item => item.completed).length;
+  const progress = totalItems === 0 ? 0 : Math.round((completedItems / totalItems) * 100);
+
+  // Fungsi Tambah Item
+  const handleAddItem = (e) => {
+    e.preventDefault();
+    if (!newItem.trim()) return;
+
+    const newItemObj = {
+      id: Date.now(),
+      text: newItem,
+      type: activeTab,
+      completed: false
+    };
+
+    setItems([...items, newItemObj]);
+    setNewItem('');
+  };
+
+  // Fungsi Toggle Status Selesai
+  const toggleItem = (id) => {
+    setItems(items.map(item => 
+      item.id === id ? { ...item, completed: !item.completed } : item
+    ));
+  };
+
+  // Fungsi Hapus Item
+  const deleteItem = (id) => {
+    setItems(items.filter(item => item.id !== id));
+  };
+
+  // Fungsi Reset (Khusus Harian - uncheck semua)
+  const resetDaily = () => {
+    if (window.confirm('Reset semua checklist harian menjadi belum selesai?')) {
+      setItems(items.map(item => 
+        item.type === 'harian' ? { ...item, completed: false } : item
+      ));
+    }
+  };
+
+  // Helper untuk warna tema berdasarkan tab
+  const getThemeColor = () => {
+    switch(activeTab) {
+      case 'harian': return 'text-emerald-600 bg-emerald-50 border-emerald-200 hover:bg-emerald-100';
+      case 'mingguan': return 'text-blue-600 bg-blue-50 border-blue-200 hover:bg-blue-100';
+      case 'bulanan': return 'text-purple-600 bg-purple-50 border-purple-200 hover:bg-purple-100';
+      default: return 'text-gray-600';
+    }
+  };
+
+  const getButtonColor = () => {
+    switch(activeTab) {
+      case 'harian': return 'bg-emerald-600 hover:bg-emerald-700';
+      case 'mingguan': return 'bg-blue-600 hover:bg-blue-700';
+      case 'bulanan': return 'bg-purple-600 hover:bg-purple-700';
+      default: return 'bg-gray-600';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 font-sans text-slate-800 p-4 md:p-8">
+      <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+        
+        {/* Header */}
+        <div className="p-6 bg-slate-900 text-white">
+          <h1 className="text-2xl font-bold text-center mb-1">Ceklist Hidup Teratur</h1>
+          <p className="text-slate-400 text-center text-sm">Kelola rutinitasmu dengan mudah</p>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex border-b border-gray-200">
+          <button 
+            onClick={() => setActiveTab('harian')}
+            className={`flex-1 py-4 text-sm font-medium transition-colors flex justify-center items-center gap-2 ${activeTab === 'harian' ? 'text-emerald-600 border-b-2 border-emerald-600 bg-emerald-50/30' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <Clock size={16} /> Harian
+          </button>
+          <button 
+            onClick={() => setActiveTab('mingguan')}
+            className={`flex-1 py-4 text-sm font-medium transition-colors flex justify-center items-center gap-2 ${activeTab === 'mingguan' ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/30' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <CalendarDays size={16} /> Mingguan
+          </button>
+          <button 
+            onClick={() => setActiveTab('bulanan')}
+            className={`flex-1 py-4 text-sm font-medium transition-colors flex justify-center items-center gap-2 ${activeTab === 'bulanan' ? 'text-purple-600 border-b-2 border-purple-600 bg-purple-50/30' : 'text-gray-500 hover:text-gray-700'}`}
+          >
+            <Calendar size={16} /> Bulanan
+          </button>
+        </div>
+
+        {/* Content Area */}
+        <div className="p-6">
+          
+          {/* Progress Bar & Header Section */}
+          <div className="mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="text-lg font-semibold capitalize flex items-center gap-2">
+                Target {activeTab}
+                <span className="text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                  {completedItems}/{totalItems} Selesai
+                </span>
+              </h2>
+              {activeTab === 'harian' && totalItems > 0 && (
+                <button 
+                  onClick={resetDaily}
+                  className="text-xs text-gray-500 hover:text-emerald-600 flex items-center gap-1 transition-colors"
+                  title="Reset status harian"
+                >
+                  <RefreshCw size={12} /> Reset Hari
+                </button>
+              )}
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div 
+                className={`h-2.5 rounded-full transition-all duration-500 ${activeTab === 'harian' ? 'bg-emerald-500' : activeTab === 'mingguan' ? 'bg-blue-500' : 'bg-purple-500'}`} 
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+          </div>
+
+          {/* Input Form */}
+          <form onSubmit={handleAddItem} className="mb-6 relative">
+            <input
+              type="text"
+              value={newItem}
+              onChange={(e) => setNewItem(e.target.value)}
+              placeholder={`Tambah tugas ${activeTab} baru...`}
+              className="w-full pl-4 pr-12 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all focus:border-transparent bg-gray-50 focus:bg-white"
+              style={{ 
+                '--tw-ring-color': activeTab === 'harian' ? 'rgb(16 185 129)' : activeTab === 'mingguan' ? 'rgb(37 99 235)' : 'rgb(147 51 234)' 
+              }}
+            />
+            <button 
+              type="submit"
+              disabled={!newItem.trim()}
+              className={`absolute right-2 top-2 p-1.5 rounded-lg text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${getButtonColor()}`}
+            >
+              <Plus size={20} />
+            </button>
+          </form>
+
+          {/* List Items */}
+          <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
+            {filteredItems.length === 0 ? (
+              <div className="text-center py-10 text-gray-400">
+                <p className="mb-2">📭</p>
+                <p className="text-sm">Belum ada daftar {activeTab}.</p>
+                <p className="text-xs">Ayo mulai tambahkan targetmu!</p>
+              </div>
+            ) : (
+              filteredItems.map(item => (
+                <div 
+                  key={item.id}
+                  className={`group flex items-center justify-between p-3 rounded-xl border transition-all duration-200 ${item.completed ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-100 shadow-sm hover:shadow-md'}`}
+                >
+                  <div 
+                    className="flex items-center gap-3 flex-1 cursor-pointer"
+                    onClick={() => toggleItem(item.id)}
+                  >
+                    <button className={`transition-colors ${item.completed ? 'text-gray-400' : activeTab === 'harian' ? 'text-emerald-500' : activeTab === 'mingguan' ? 'text-blue-500' : 'text-purple-500'}`}>
+                      {item.completed ? <CheckCircle size={22} /> : <Circle size={22} />}
+                    </button>
+                    <span className={`text-sm font-medium transition-all ${item.completed ? 'text-gray-400 line-through decoration-gray-300' : 'text-slate-700'}`}>
+                      {item.text}
+                    </span>
+                  </div>
+                  
+                  <button 
+                    onClick={() => deleteItem(item.id)}
+                    className="text-gray-300 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                    aria-label="Hapus item"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+
+        </div>
+        
+        {/* Footer info */}
+        <div className="bg-gray-50 px-6 py-3 border-t border-gray-100 text-center">
+          <p className="text-xs text-gray-400">
+             {progress === 100 ? '🎉 Wow! Semua selesai!' : '💪 Tetap semangat!'}
+          </p>
+        </div>
+      </div>
+
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background-color: #e2e8f0;
+          border-radius: 20px;
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default App;
